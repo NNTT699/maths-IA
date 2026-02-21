@@ -1,0 +1,85 @@
+import numpy as np
+from scipy.optimize import fsolve
+import matplotlib.pyplot as plt
+
+A = 100 
+
+def lagrange_equations(vars):
+   
+    r1, k, h, lam = vars
+    
+    if r1 <= 0 or k <= 1 or h <= 0:
+        return [1e10, 1e10, 1e10, 1e10]
+    
+    #volume
+    V = (np.pi/3) * h * r1**2 * (1 + k + k**2)
+    
+    #constraint function
+    s = np.sqrt(h**2 + r1**2*(k-1)**2)
+    g = A - np.pi*r1**2 - np.pi*r1*(1+k)*s
+    
+    #partial derivatives of V
+    dV_dr1 = (2*np.pi/3) * h * r1 * (1 + k + k**2)
+    dV_dk = (np.pi/3) * h * r1**2 * (2*k + 1)
+    dV_dh = (np.pi/3) * r1**2 * (1 + k + k**2)
+    
+    #partial derivatives of g
+    if s > 0:
+        dg_dr1 = -2*np.pi*r1 - np.pi*(1+k)*s - np.pi*r1*(1+k)*(r1*(k-1)**2)/s
+        dg_dk = -np.pi*r1*s - np.pi*r1*(1+k)*(r1**2*(k-1))/s
+        dg_dh = -np.pi*r1*(1+k)*h/s
+    else:
+        return [1e10, 1e10, 1e10, 1e10]
+    
+    eq1 = dV_dr1 - lam * dg_dr1
+    eq2 = dV_dk - lam * dg_dk
+    eq3 = dV_dh - lam * dg_dh
+    eq4 = g  #constraint
+    
+    return [eq1, eq2, eq3, eq4]
+
+#try multiple initial guesses
+initial_guesses = [
+    [2.3, 1.8, 3.7, 1.0],
+    [2.0, 1.5, 4.0, 1.0],
+    [2.5, 2.0, 3.5, 1.0],
+    [3.0, 1.3, 4.5, 1.0],
+]
+
+solutions = []
+for guess in initial_guesses:
+    try:
+        sol = fsolve(lagrange_equations, guess, full_output=True)
+        r1, k, h, lam = sol[0]
+        info = sol[1]
+        
+        # Check if solution is valid
+        if r1 > 0 and k > 1 and h > 0:
+            residual = np.linalg.norm(lagrange_equations([r1, k, h, lam]))
+            if residual < 1e-6:
+                V = (np.pi/3) * h * r1**2 * (1 + k + k**2)
+                solutions.append((r1, k, h, lam, V, residual))
+    except:
+        continue
+
+if solutions:
+    best_sol = max(solutions, key=lambda x: x[4])
+    r1_opt, k_opt, h_opt, lam_opt, V_opt, residual = best_sol
+    
+    r2_opt = k_opt * r1_opt
+    
+    print(f"Optimal base radius r₁ = {r1_opt:.4f} cm")
+    print(f"Optimal top radius r₂ = {r2_opt:.4f} cm")
+    print(f"Optimal ratio k = {k_opt:.4f}")
+    print(f"Optimal height h = {h_opt:.4f} cm")
+    print(f"Maximum Volume V = {V_opt:.4f} cm³")
+    print(f"Lagrange multiplier λ = {lam_opt:.4f}")
+
+    # Verify constraint
+    s = np.sqrt(h_opt**2 + r1_opt**2*(k_opt-1)**2)
+    A_check = np.pi*r1_opt**2 + np.pi*r1_opt*(1+k_opt)*s
+    print(f"Surface area check: {A_check:.4f} cm² (should be {A})")
+    
+    print(f"\nInterpretation of λ = {lam_opt:.4f}:")
+else:
+    print("No valid solution found with Lagrange multipliers")

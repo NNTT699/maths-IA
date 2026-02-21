@@ -1,0 +1,20 @@
+eps = 1e-5
+r1, k = r1_opt, k_opt
+
+V0 = volume_frustum(r1, k, A)
+Vr_plus = volume_frustum(r1+eps, k, A)
+Vr_minus = volume_frustum(r1-eps, k, A)
+Vk_plus = volume_frustum(r1, k+eps, A)
+Vk_minus = volume_frustum(r1, k-eps, A)
+Vrk_pp = volume_frustum(r1+eps, k+eps, A)
+Vrk_pm = volume_frustum(r1+eps, k-eps, A)
+Vrk_mp = volume_frustum(r1-eps, k+eps, A)
+Vrk_mm = volume_frustum(r1-eps, k-eps, A)
+
+H11 = (Vr_plus - 2*V0 + Vr_minus) / eps**2
+H22 = (Vk_plus - 2*V0 + Vk_minus) / eps**2
+H12 = (Vrk_pp - Vrk_pm - Vrk_mp + Vrk_mm) / (4*eps**2)
+
+det_H = H11*H22 - H12**2
+print(f"H11 = {H11:.4f}, H22 = {H22:.4f}, H12 = {H12:.4f}")
+print(f"det(H) = {det_H:.4f}")
